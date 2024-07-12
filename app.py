@@ -17,14 +17,17 @@ from langchain.schema.runnable.config import RunnableConfig
 load_dotenv()
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 QDRANT_CLOUD_KEY = os.environ["QDRANT_CLOUD_KEY"]
-LANGSMITH_API_KEY = os.environ["LANGSMITH_API_KEY"]
+// print openai api key
+print(OPENAI_API_KEY)
+
+#LANGSMITH_API_KEY = os.environ["LANGSMITH_API_KEY"]
 
 # -- RETRIEVAL -- #
 
 # Define embedding model
 base_embeddings_model = OpenAIEmbeddings(
     model="text-embedding-3-small",
-    openai_api_key=userdata.get('OPENAI_API_KEY')
+    openai_api_key=OPENAI_API_KEY
 )
 
 # Use a Qdrant VectorStore to embed and store our data
@@ -33,7 +36,7 @@ from_cloud_qdrant = Qdrant.from_existing_collection(
     # 3 vector indices - recipe_descriptions, recipe_nutrition, recipe_ingredients
     collection_name="recipe_descriptions",
     url='https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io',
-    api_key=userdata.get('QDRANT_CLOUD_API_KEY'),
+    api_key=QDRANT_CLOUD_KEY
 )
 
 # And then convert it to a retriever so it can be used in our chain
@@ -44,7 +47,7 @@ base_retriever = from_cloud_qdrant.as_retriever()
 # Define the LLM
 base_llm = ChatOpenAI(
     model="gpt-3.5-turbo", 
-    openai_api_key=userdata.get('OPENAI_API_KEY'), 
+    openai_api_key=OPENAI_API_KEY, 
     tags=["base_llm"]
 )
 
