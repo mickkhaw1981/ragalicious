@@ -15,12 +15,8 @@ from langchain.schema.runnable.config import RunnableConfig
 
 # ---- ENV VARIABLES ---- # 
 load_dotenv()
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-QDRANT_CLOUD_KEY = os.environ["QDRANT_CLOUD_KEY"]
-// print openai api key
-print(OPENAI_API_KEY)
-
-#LANGSMITH_API_KEY = os.environ["LANGSMITH_API_KEY"]
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
 
 # -- RETRIEVAL -- #
 
