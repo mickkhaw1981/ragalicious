@@ -2,6 +2,7 @@ import os
 import chainlit as cl
 from dotenv import load_dotenv
 from operator import itemgetter
+from langchain_core.messages.ai import AIMessageChunk
 from langchain_qdrant.vectorstores import Qdrant
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
@@ -36,7 +37,7 @@ from_cloud_qdrant = Qdrant.from_existing_collection(
 )
 
 # Convert retrieved documents to JSON-serializable format
-base_retriever = from_cloud_qdrant.as_retriever()
+base_retriever = from_cloud_qdrant.as_retriever(search_kwargs={"k": 20})
 
 
 # -- AUGMENTED -- #
@@ -95,7 +96,8 @@ async def start_chat():
         | {"response": base_rag_prompt | base_llm | StrOutputParser(), "context": itemgetter("context")}
     )
     cl.user_session.set("base_rag_chain", base_rag_chain)
-    
+
+
     
  # Message Handling Function: Process and respond to user messages using the RAG chain.
 @cl.on_message  
@@ -111,5 +113,7 @@ async def main(message: cl.Message):
         {"question": message.content},
         config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
     ):
-        await msg.stream_token(chunk)
+        if isinstance(chunk, dict) and 'response' in chunk and isinstance(chunk['response'], str):
+            await msg.stream_token(chunk['response'])
+
     await msg.send()
