@@ -109,6 +109,26 @@ def retriever_output_handler(documents):
 
 # -- GENERATION -- #
 
+@cl.set_starters
+async def set_starters():
+    return [
+        cl.Starter(
+            label="Plan your daily meals",
+            message="Give me ideas for making an easy weeknight dinner.",
+            icon="",
+            ),
+        cl.Starter(
+            label="Get ready to host occasions",
+            message="What are good dishes to make for Rosh Hashanah?",
+            icon="",
+            ),
+        cl.Starter(
+            label="Get scrappy with ingredients that you already have",
+            message="What can I make with pasta, lemon and chickpeas?",
+            icon="",
+            )
+    ]
+
 # Chat Start Function: Initialize a RAG (Retrieval-Augmented Generation) chain at the start of each chat session.
 @cl.on_chat_start
 async def start_chat():
