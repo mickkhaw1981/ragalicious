@@ -1,4 +1,4 @@
-chainlit==1.0.0
+chainlit==1.1.306
 langchain==0.2.7
 langchain_core==0.2.15
 langchain_openai==0.1.15
