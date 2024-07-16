@@ -1,14 +1,9 @@
-# Welcome to Chainlit! 🚀🤖
+# 😋 Welcome to RAGalicious!
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+RAGalicious is a chatbot designed to help users discover delectable recipes from the NYTimes Cooking section. It simplifies the recipe discovery process, providing inspiration based on ingredients, dietary needs or meal preferences.
 
-## Useful Links 🔗
+## Example prompts
 
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/k73SQ3FyUh) to ask questions, share your projects, and connect with other developers! 💬
-
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
-
-## Welcome screen
-
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
+- **Plan your daily meals:** E.g, "Give me ideas for making an easy weeknight dinner."
+- **Get ready to host occasions:** E.g. "What are good dishes to make for Rosh Hashanah?"
+- **Get scrappy with ingredients you already have:** E.g. "What can I make with pasta, lemon and chickpeas?"
