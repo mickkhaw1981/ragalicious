@@ -3,6 +3,7 @@ import chainlit as cl
 from dotenv import load_dotenv
 from operator import itemgetter
 from langchain_core.messages.ai import AIMessageChunk
+from langchain.retrievers import EnsembleRetriever
 from langchain_qdrant.vectorstores import Qdrant
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
@@ -13,12 +14,13 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable.config import RunnableConfig
+from langchain_core.runnables import RunnableLambda
 
 # ---- ENV VARIABLES ---- # 
 load_dotenv()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
-
+QDRANT_CLOUD_URL = 'https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io'
 # -- RETRIEVAL -- #
 
 # Define embedding model
@@ -28,17 +30,44 @@ base_embeddings_model = OpenAIEmbeddings(
 )
 
 # Use a Qdrant VectorStore to embed and store our data
-from_cloud_qdrant = Qdrant.from_existing_collection(
+qdrant_descriptions = Qdrant.from_existing_collection(
     embedding=base_embeddings_model,
     # 3 vector indices - recipe_descriptions, recipe_nutrition, recipe_ingredients
     collection_name="recipe_descriptions",
-    url='https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io',
+    url=QDRANT_CLOUD_URL,
+    api_key=QDRANT_CLOUD_KEY
+)
+
+qdrant_nutrition = Qdrant.from_existing_collection(
+    embedding=base_embeddings_model,
+    collection_name="recipe_nutrition",
+    url=QDRANT_CLOUD_URL,
+    api_key=QDRANT_CLOUD_KEY
+)
+
+qdrant_ingredients = Qdrant.from_existing_collection(
+    embedding=base_embeddings_model,
+    collection_name="recipe_ingredients",
+    url=QDRANT_CLOUD_URL,
     api_key=QDRANT_CLOUD_KEY
 )
 
 # Convert retrieved documents to JSON-serializable format
-base_retriever = from_cloud_qdrant.as_retriever(search_kwargs={"k": 20})
+descriptions_retriever = qdrant_descriptions.as_retriever(search_kwargs={"k": 20})
+nutrition_retriever = qdrant_nutrition.as_retriever(search_kwargs={"k": 20})
+ingredients_retriever = qdrant_ingredients.as_retriever(search_kwargs={"k": 20})
 
+ensemble_retriever = EnsembleRetriever(
+    retrievers=[
+        descriptions_retriever,
+        nutrition_retriever,
+        ingredients_retriever,
+    ],
+    weights=[
+        0.5,
+        0.25,
+        0.25,
+])
 
 # -- AUGMENTED -- #
 
@@ -71,6 +100,12 @@ Question:
 
 base_rag_prompt = ChatPromptTemplate.from_template(base_rag_prompt_template)
 
+def retriever_output_handler(documents):
+    print("returning total results count: ", len(documents))
+    for doc in documents: 
+        print(f"""{doc.metadata['_collection_name'].ljust(20)} - {doc.metadata['url']} - """)
+    
+    return documents
 
 # -- GENERATION -- #
 
@@ -86,7 +121,7 @@ async def start_chat():
         # INVOKE CHAIN WITH: {"question" : "<<SOME USER QUESTION>>"}
         # "question" : populated by getting the value of the "question" key
         # "context"  : populated by getting the value of the "question" key and chaining it into the base_retriever
-        {"context": itemgetter("question") | base_retriever, "question": itemgetter("question")}
+        {"context": itemgetter("question") | ensemble_retriever |  RunnableLambda(retriever_output_handler) , "question": itemgetter("question")}
         # "context"  : is assigned to a RunnablePassthrough object (will not be called or considered in the next step)
         #              by getting the value of the "context" key from the previous step
         | RunnablePassthrough.assign(context=itemgetter("context"))
@@ -115,5 +150,6 @@ async def main(message: cl.Message):
     ):
         if isinstance(chunk, dict) and 'response' in chunk and isinstance(chunk['response'], str):
             await msg.stream_token(chunk['response'])
+
 
     await msg.send()
