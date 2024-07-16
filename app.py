@@ -73,7 +73,7 @@ ensemble_retriever = EnsembleRetriever(
 
 # Define the LLM
 base_llm = ChatOpenAI(
-    model="gpt-3.5-turbo", 
+    model="gpt-4o", 
     openai_api_key=OPENAI_API_KEY, 
     tags=["base_llm"]
 )
@@ -88,6 +88,10 @@ Provide the top 3 options if available. For each option, provide the following i
 3. The ratings and number of ratings
 
 If you don't know the answer based on the context, say you don't know. 
+
+Subsequently, if asked for the full recipe or instructions, or if the user indicates a preferred options, provide the full recipe or instructions. 
+
+You no longer need to provide a brief description, the URL,the ratings and number of ratings once the user has made a selection.
 
 After providing your answer, always prompt the user for feedback or more questions in order to continue the conversation.
 
