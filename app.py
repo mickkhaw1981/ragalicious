@@ -134,6 +134,14 @@ async def set_starters():
             )
     ]
 
+# This function can be used to rename the 'author' of a message. 
+@cl.author_rename
+def rename(orig_author: str):
+    rename_dict = {
+        "Assistant" : "RAGalicious"
+    }
+    return rename_dict.get(orig_author, orig_author)
+
 # Chat Start Function: Initialize a RAG (Retrieval-Augmented Generation) chain at the start of each chat session.
 @cl.on_chat_start
 async def start_chat():
