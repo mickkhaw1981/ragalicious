@@ -211,7 +211,7 @@ async def generate_text_answer(transcription):
 # Text-to-Speech Function: Take the text answer generated and convert it to an audio file
 @cl.step(type="tool")
 async def text_to_speech(text: str, mime_type: str):
-    CHUNK_SIZE = 2048
+    CHUNK_SIZE = 2048 # try 4096 or 8192 if getting read timeout error. the bigger the chunk size, the fewer API calls but longer wait time
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
     headers = {
     "Accept": mime_type,
