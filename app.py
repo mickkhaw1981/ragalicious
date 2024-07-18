@@ -102,6 +102,10 @@ Provide the top 3 options if available. For each option, provide the following i
 
 If you don't know the answer based on the context, say you don't know. 
 
+Subsequently, if asked for the full recipe or instructions, or if the user indicates a preferred options, provide the full recipe or instructions. 
+
+You no longer need to provide a brief description, the URL,the ratings and number of ratings once the user has made a selection.
+
 After providing your answer, always prompt the user for feedback or more questions in order to continue the conversation.
 
 Context:
@@ -123,27 +127,38 @@ def retriever_output_handler(documents):
 
 # -- GENERATION -- #
 
+
+# Conversation starters for the 1st screen
 @cl.set_starters
 async def set_starters():
     return [
         cl.Starter(
             label="Plan your daily meals",
             message="Give me ideas for making an easy weeknight dinner.",
-            icon="",
+            icon="/public/meals4.svg",
             ),
         cl.Starter(
-            label="Get ready to host occasions",
+            label="Ideas for special occasions",
             message="What are good dishes to make for Rosh Hashanah?",
-            icon="",
+            icon="/public/occasion4.svg",
             ),
         cl.Starter(
-            label="Get scrappy with ingredients that you already have",
+            label="Make something with ingredients you have",
             message="What can I make with pasta, lemon and chickpeas?",
-            icon="",
+            icon="/public/ingredients4.svg",
             )
     ]
 
-# Chat Start Function: Initialize a RAG chain at the start of each chat session.
+# This function can be used to rename the 'author' of a message. 
+@cl.author_rename
+def rename(orig_author: str):
+    rename_dict = {
+        "Assistant" : "RAGalicious"
+    }
+    return rename_dict.get(orig_author, orig_author)
+
+# Chat Start Function: Initialize a RAG (Retrieval-Augmented Generation) chain at the start of each chat session.
+
 @cl.on_chat_start
 async def start_chat():
     """
