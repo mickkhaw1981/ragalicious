@@ -120,17 +120,17 @@ async def set_starters():
         cl.Starter(
             label="Plan your daily meals",
             message="Give me ideas for making an easy weeknight dinner.",
-            icon="/public/meals.svg",
+            icon="/public/meals4.svg",
             ),
         cl.Starter(
             label="Ideas for special occasions",
             message="What are good dishes to make for Rosh Hashanah?",
-            icon="/public/occasions.svg",
+            icon="/public/occasion4.svg",
             ),
         cl.Starter(
             label="Make something with ingredients you have",
             message="What can I make with pasta, lemon and chickpeas?",
-            icon="/public/ingredients3.svg",
+            icon="/public/ingredients4.svg",
             )
     ]
 
