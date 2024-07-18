@@ -1,0 +1,132 @@
+import os
+from langchain.retrievers import EnsembleRetriever
+from langchain_qdrant.vectorstores import Qdrant
+from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain.chains.query_constructor.base import AttributeInfo
+from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_community.vectorstores.qdrant import Qdrant
+from langchain_community.vectorstores import Qdrant as QdrantCommunity
+from qdrant_client import QdrantClient
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
+QDRANT_CLOUD_URL = 'https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io'
+
+
+# Define embedding model
+base_embeddings_model = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    openai_api_key=OPENAI_API_KEY
+)
+
+def get_ensemble_retriever():
+
+    # Use a Qdrant VectorStore to embed and store our data
+    qdrant_descriptions = Qdrant.from_existing_collection(
+        embedding=base_embeddings_model,
+        # 3 vector indices - recipe_descriptions, recipe_nutrition, recipe_ingredients
+        collection_name="recipe_descriptions",
+        url=QDRANT_CLOUD_URL,
+        api_key=QDRANT_CLOUD_KEY
+    )
+
+    qdrant_nutrition = Qdrant.from_existing_collection(
+        embedding=base_embeddings_model,
+        collection_name="recipe_nutrition",
+        url=QDRANT_CLOUD_URL,
+        api_key=QDRANT_CLOUD_KEY
+    )
+
+    qdrant_ingredients = Qdrant.from_existing_collection(
+        embedding=base_embeddings_model,
+        collection_name="recipe_ingredients",
+        url=QDRANT_CLOUD_URL,
+        api_key=QDRANT_CLOUD_KEY
+    )
+
+    # Convert retrieved documents to JSON-serializable format
+    descriptions_retriever = qdrant_descriptions.as_retriever(search_kwargs={"k": 20})
+    nutrition_retriever = qdrant_nutrition.as_retriever(search_kwargs={"k": 20})
+    ingredients_retriever = qdrant_ingredients.as_retriever(search_kwargs={"k": 20})
+
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[
+            descriptions_retriever,
+            nutrition_retriever,
+            ingredients_retriever,
+        ],
+        weights=[
+            0.5,
+            0.25,
+            0.25,
+    ])
+
+    return ensemble_retriever
+
+
+def get_self_retriever(llm_model):
+
+    metadata_field_info = [
+        AttributeInfo(
+            name="cuisine",
+            description="The national / ethnic cuisine categories of the recipe."
+            "It only supports equal and contain comparisons. "
+            "Here are some examples: cuisine = [' A '], cuisine = [' A ', 'B'], contain (cuisine, 'A')",
+            type="list[string]",
+        ),
+        AttributeInfo(
+            name="diet",
+            description="The diets / dietary restrictions satisfied by this recipe."
+            "It only supports equal and contain comparisons. "
+            "Here are some examples: diet = [' A '], diet = [' A ', 'B'], contain (diet, 'A')",
+            type="list[string]",
+        ),
+        AttributeInfo(
+            name="meal",
+            description="The meal types that are well suited for this recipe."
+            "It only supports equal and contain comparisons. "
+            "Here are some examples: meal = [' A '], meal = [' A ', 'B'], contain (meal, 'A')",
+            type="list[string]",
+        ),
+        AttributeInfo(
+            name="occasion",
+            description="The occasions, holidays, celebrations that are well suited for this recipe."
+            "It only supports equal and contain comparisons. "
+            "Here are some examples: occasion = [' A '], occasion = [' A ', 'B'], contain (occasion, 'A')",
+            type="list[string]",
+        ),
+        AttributeInfo(
+            name="ingredients",
+            description="The main ingredients required to make this recipe."
+            "It only supports equal and contain comparisons. "
+            "Here are some examples: ingredients = [' A '], ingredients = [' A ', 'B'], contain (ingredients, 'A')",
+            type="list[string]",
+        ),
+        AttributeInfo(
+            name="title",
+            description="The title of the recipe or dish",
+            type="string",
+        ),
+        AttributeInfo(
+            name="rating", description="The average rating given to the recipe from 1 to 5", type="integer"
+        ),
+        AttributeInfo(
+            name="time", description="The estimated time in minutes required to cook and prepare the recipe", type="integer"
+        ),
+    ]
+    client = QdrantClient(
+        url=QDRANT_CLOUD_URL,
+        api_key=QDRANT_CLOUD_KEY,
+    )
+
+
+    vectorstore = Qdrant(
+        client=client,
+        collection_name='recipe_descriptions_v2',
+        embeddings=base_embeddings_model,
+    )
+    
+    retriever = SelfQueryRetriever.from_llm(
+        llm_model, vectorstore, "Brief description of a recipe", metadata_field_info, verbose=True
+    )
+    return retriever
