@@ -51,7 +51,6 @@ Provide the top 3 options if available. For each option, provide the following i
 1. A brief description of the recipe
 2. The URL of the recipe
 3. The ratings and number of ratings
-4. The cuisine, diet, or occassion of the recipe only if relevant to the user's question.
 
 If you don't know the answer based on the context, say you don't know. 
 
