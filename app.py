@@ -59,6 +59,8 @@ You no longer need to provide a brief description, the URL,the ratings and numbe
 
 After providing your answer, always prompt the user for feedback or more questions in order to continue the conversation.
 
+If the context is empty, please be careful to note to the user that there are no recipes matching those specific requirements and do NOT provide any other recipes as suggestions.
+
 Context:
 {context}
 
@@ -71,7 +73,7 @@ base_rag_prompt = ChatPromptTemplate.from_template(base_rag_prompt_template)
 def retriever_output_handler(documents):
     print("returning total results count: ", len(documents))
     for doc in documents: 
-        print(f"""{doc.metadata['_collection_name'].ljust(20)} - {doc.metadata['url']} - """)
+        print(f"""{doc.metadata['url']} - """)
     
     return documents
 
@@ -94,8 +96,8 @@ async def set_starters():
             icon="/public/meals4.svg",
             ),
         cl.Starter(
-            label="Ideas for special occasions",
-            message="What are good dishes to make for Rosh Hashanah?",
+            label="Ideas for special occasions that are part of a specific cuisine",
+            message="What are good Middle Eastern dishes to make for Thanksgiving?",
             icon="/public/occasion4.svg",
             ),
         cl.Starter(

@@ -1,4 +1,5 @@
 import os
+from langchain_community.vectorstores import MyScale, MyScaleSettings
 from langchain.retrievers import EnsembleRetriever
 from langchain_qdrant.vectorstores import Qdrant
 from langchain_openai.embeddings import OpenAIEmbeddings
@@ -7,6 +8,7 @@ from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_community.vectorstores.qdrant import Qdrant
 from langchain_community.vectorstores import Qdrant as QdrantCommunity
 from qdrant_client import QdrantClient
+from .metadata import CUISINES, OCCASIONS, DIETS
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
@@ -63,6 +65,8 @@ def get_ensemble_retriever():
 
     return ensemble_retriever
 
+def _list_to_string(l:list) -> str:
+    return ', '.join([f'`{item}`' for item in l])
 
 def get_self_retriever(llm_model):
 
@@ -70,15 +74,17 @@ def get_self_retriever(llm_model):
         AttributeInfo(
             name="cuisine",
             description="The national / ethnic cuisine categories of the recipe."
-            "It only supports equal and contain comparisons. "
-            "Here are some examples: cuisine = [' A '], cuisine = [' A ', 'B'], contain (cuisine, 'A')",
+            f"It should be one of {_list_to_string(CUISINES)}. "
+            "It only supports contain comparisons. "
+            "Here are some examples: contain (diet, 'A')",
             type="list[string]",
         ),
         AttributeInfo(
             name="diet",
             description="The diets / dietary restrictions satisfied by this recipe."
-            "It only supports equal and contain comparisons. "
-            "Here are some examples: diet = [' A '], diet = [' A ', 'B'], contain (diet, 'A')",
+            f"It should be one of {_list_to_string(DIETS)}. "
+            "It only supports contain comparisons. "
+            f"Here are some examples: contain (diet, '{DIETS[0]}')",
             type="list[string]",
         ),
         AttributeInfo(
@@ -91,8 +97,9 @@ def get_self_retriever(llm_model):
         AttributeInfo(
             name="occasion",
             description="The occasions, holidays, celebrations that are well suited for this recipe."
-            "It only supports equal and contain comparisons. "
-            "Here are some examples: occasion = [' A '], occasion = [' A ', 'B'], contain (occasion, 'A')",
+            f"It should be one of {_list_to_string(OCCASIONS)}. "
+            "It only supports contain comparisons. "
+            "Here are some examples: contain (diet, 'A')",
             type="list[string]",
         ),
         AttributeInfo(
@@ -114,17 +121,28 @@ def get_self_retriever(llm_model):
             name="time", description="The estimated time in minutes required to cook and prepare the recipe", type="integer"
         ),
     ]
-    client = QdrantClient(
-        url=QDRANT_CLOUD_URL,
-        api_key=QDRANT_CLOUD_KEY,
+
+    config = MyScaleSettings(
+        host=os.environ['MYSCALE_HOST'],
+        port=443,
+        username=os.environ['MYSCALE_USERNAME'],
+        password=os.environ['MYSCALE_PASSWORD']
     )
+    vectorstore = MyScale(base_embeddings_model, config)
+
+    
+    
+    # client = QdrantClient(
+    #     url=QDRANT_CLOUD_URL,
+    #     api_key=QDRANT_CLOUD_KEY,
+    # )
 
 
-    vectorstore = Qdrant(
-        client=client,
-        collection_name='recipe_descriptions_v2',
-        embeddings=base_embeddings_model,
-    )
+    # vectorstore = Qdrant(
+    #     client=client,
+    #     collection_name='recipe_descriptions_v2',
+    #     embeddings=base_embeddings_model,
+    # )
     
     retriever = SelfQueryRetriever.from_llm(
         llm_model, vectorstore, "Brief description of a recipe", metadata_field_info, verbose=True
