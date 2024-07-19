@@ -74,13 +74,40 @@ base_rag_prompt = ChatPromptTemplate.from_template(base_rag_prompt_template)
 
 
 
-
 # -- RETRIEVAL -- #
 
 retriever = get_self_retriever(base_llm)
 
 
-# -- GENERATION -- #
+
+# Conversation starters for the 1st screen
+@cl.set_starters
+async def set_starters():
+    return [
+        cl.Starter(
+            label="Plan your daily meals",
+            message="Give me ideas for making an easy weeknight dinner.",
+            icon="/public/meals4.svg",
+            ),
+        cl.Starter(
+            label="Ideas for special occasions",
+            message="What are good dishes to make for Rosh Hashanah?",
+            icon="/public/occasion4.svg",
+            ),
+        cl.Starter(
+            label="Make something with ingredients you have",
+            message="What can I make with pasta, lemon and chickpeas?",
+            icon="/public/ingredients4.svg",
+            )
+    ]
+
+# This function can be used to rename the 'author' of a message. 
+@cl.author_rename
+def rename(orig_author: str):
+    rename_dict = {
+        "Assistant" : "RAGalicious"
+    }
+    return rename_dict.get(orig_author, orig_author)
 
 
 # Conversation starters for the 1st screen
@@ -113,7 +140,6 @@ def rename(orig_author: str):
     return rename_dict.get(orig_author, orig_author)
 
 # Chat Start Function: Initialize a RAG (Retrieval-Augmented Generation) chain at the start of each chat session.
-
 
 @cl.on_chat_start
 async def start_chat():
