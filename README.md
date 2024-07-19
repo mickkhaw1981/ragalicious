@@ -21,6 +21,6 @@ This app has the following key features:
 
 ## Demo Day Materials
 
-Slides: link to come
-YouTube: link to come
-App architecture: link to come
+- Slides: link to come
+- YouTube: link to come
+- App architecture: link to come
