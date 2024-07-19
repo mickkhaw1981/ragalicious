@@ -117,16 +117,17 @@ Question:
 
 base_rag_prompt = ChatPromptTemplate.from_template(base_rag_prompt_template)
 
+
+
+# -- GENERATION -- #
+
+# Logging function for the retriever output
 def retriever_output_handler(documents):
     print("returning total results count: ", len(documents))
     for doc in documents: 
         print(f"""{doc.metadata['_collection_name'].ljust(20)} - {doc.metadata['url']} - """)
     
     return documents
-
-
-# -- GENERATION -- #
-
 
 # Conversation starters for the 1st screen
 @cl.set_starters
