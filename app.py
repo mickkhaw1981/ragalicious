@@ -20,6 +20,7 @@ from io import BytesIO
 from openai import AsyncOpenAI
 
 from utils.retrievers import get_ensemble_retriever, get_self_retriever
+from utils.debug import retriever_output_logger
 
 client = AsyncOpenAI()
 
@@ -50,6 +51,7 @@ Provide the top 3 options if available. For each option, provide the following i
 1. A brief description of the recipe
 2. The URL of the recipe
 3. The ratings and number of ratings
+4. The cuisine, diet, or occassion of the recipe only if relevant to the user's question.
 
 If you don't know the answer based on the context, say you don't know. 
 
@@ -70,12 +72,7 @@ Question:
 
 base_rag_prompt = ChatPromptTemplate.from_template(base_rag_prompt_template)
 
-def retriever_output_handler(documents):
-    print("returning total results count: ", len(documents))
-    for doc in documents: 
-        print(f"""{doc.metadata['url']} - """)
-    
-    return documents
+
 
 
 # -- RETRIEVAL -- #
@@ -91,8 +88,8 @@ retriever = get_self_retriever(base_llm)
 async def set_starters():
     return [
         cl.Starter(
-            label="Plan your daily meals",
-            message="Give me ideas for making an easy weeknight dinner.",
+            label="Plan your quick daily meals",
+            message="Give me ideas for making an easy weeknight dinner that takes less than 25 minutes to prepare",
             icon="/public/meals4.svg",
             ),
         cl.Starter(
@@ -130,7 +127,7 @@ async def start_chat():
         # INVOKE CHAIN WITH: {"question" : "<<SOME USER QUESTION>>"}
         # "question" : populated by getting the value of the "question" key
         # "context"  : populated by getting the value of the "question" key and chaining it into the base_retriever
-        {"context": itemgetter("question") | retriever |  RunnableLambda(retriever_output_handler) , "question": itemgetter("question")}
+        {"context": itemgetter("question") | retriever |  RunnableLambda(retriever_output_logger) , "question": itemgetter("question")}
         # "context"  : is assigned to a RunnablePassthrough object (will not be called or considered in the next step)
         #              by getting the value of the "context" key from the previous step
         | RunnablePassthrough.assign(context=itemgetter("context"))

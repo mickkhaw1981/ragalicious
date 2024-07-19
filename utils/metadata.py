@@ -126,3 +126,16 @@ DIETS = [
   "Nut Free",
   "Raw",
 ]
+
+EQUIPMENT = [
+  "Sheet Pan"
+  "Skillet"
+  "Slow Cooker"
+  "Stovetop"
+  "Air Fryer"
+  "Barbecue"
+  "Cast Iron"
+  "Dutch Oven"
+  "Food Processor"
+  "Freezer Friendly"
+]
