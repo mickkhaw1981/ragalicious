@@ -3,9 +3,6 @@ import chainlit as cl
 from dotenv import load_dotenv
 from operator import itemgetter
 from langchain_core.messages.ai import AIMessageChunk
-from langchain.retrievers import EnsembleRetriever
-from langchain_qdrant.vectorstores import Qdrant
-from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEndpoint
@@ -22,6 +19,9 @@ from chainlit.element import ElementBased
 from io import BytesIO
 from openai import AsyncOpenAI
 
+from utils.retrievers import get_ensemble_retriever, get_self_retriever
+from utils.debug import retriever_output_logger
+
 client = AsyncOpenAI()
 
 # ---- ENV VARIABLES ---- # 
@@ -32,54 +32,6 @@ QDRANT_CLOUD_URL = 'https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID")
 
-
-# -- RETRIEVAL -- #
-
-# Define embedding model
-base_embeddings_model = OpenAIEmbeddings(
-    model="text-embedding-3-small",
-    openai_api_key=OPENAI_API_KEY
-)
-
-# Use a Qdrant VectorStore to embed and store our data
-qdrant_descriptions = Qdrant.from_existing_collection(
-    embedding=base_embeddings_model,
-    # 3 vector indices - recipe_descriptions, recipe_nutrition, recipe_ingredients
-    collection_name="recipe_descriptions",
-    url=QDRANT_CLOUD_URL,
-    api_key=QDRANT_CLOUD_KEY
-)
-
-qdrant_nutrition = Qdrant.from_existing_collection(
-    embedding=base_embeddings_model,
-    collection_name="recipe_nutrition",
-    url=QDRANT_CLOUD_URL,
-    api_key=QDRANT_CLOUD_KEY
-)
-
-qdrant_ingredients = Qdrant.from_existing_collection(
-    embedding=base_embeddings_model,
-    collection_name="recipe_ingredients",
-    url=QDRANT_CLOUD_URL,
-    api_key=QDRANT_CLOUD_KEY
-)
-
-# Convert retrieved documents to JSON-serializable format
-descriptions_retriever = qdrant_descriptions.as_retriever(search_kwargs={"k": 20})
-nutrition_retriever = qdrant_nutrition.as_retriever(search_kwargs={"k": 20})
-ingredients_retriever = qdrant_ingredients.as_retriever(search_kwargs={"k": 20})
-
-ensemble_retriever = EnsembleRetriever(
-    retrievers=[
-        descriptions_retriever,
-        nutrition_retriever,
-        ingredients_retriever,
-    ],
-    weights=[
-        0.5,
-        0.25,
-        0.25,
-])
 
 
 # -- AUGMENTED -- #
@@ -108,6 +60,8 @@ You no longer need to provide a brief description, the URL,the ratings and numbe
 
 After providing your answer, always prompt the user for feedback or more questions in order to continue the conversation.
 
+If the context is empty, please be careful to note to the user that there are no recipes matching those specific requirements and do NOT provide any other recipes as suggestions.
+
 Context:
 {context}
 
@@ -119,15 +73,11 @@ base_rag_prompt = ChatPromptTemplate.from_template(base_rag_prompt_template)
 
 
 
-# -- GENERATION -- #
+# -- RETRIEVAL -- #
 
-# Logging function for the retriever output
-def retriever_output_handler(documents):
-    print("returning total results count: ", len(documents))
-    for doc in documents: 
-        print(f"""{doc.metadata['_collection_name'].ljust(20)} - {doc.metadata['url']} - """)
-    
-    return documents
+retriever = get_self_retriever(base_llm)
+
+
 
 # Conversation starters for the 1st screen
 @cl.set_starters
@@ -158,6 +108,36 @@ def rename(orig_author: str):
     }
     return rename_dict.get(orig_author, orig_author)
 
+
+# Conversation starters for the 1st screen
+@cl.set_starters
+async def set_starters():
+    return [
+        cl.Starter(
+            label="Plan your quick daily meals",
+            message="Give me ideas for making an easy weeknight dinner that takes less than 25 minutes to prepare",
+            icon="/public/meals4.svg",
+            ),
+        cl.Starter(
+            label="Ideas for special occasions that are part of a specific cuisine",
+            message="What are good Middle Eastern dishes to make for Thanksgiving?",
+            icon="/public/occasion4.svg",
+            ),
+        cl.Starter(
+            label="Make something with ingredients you have",
+            message="What can I make with pasta, lemon and chickpeas?",
+            icon="/public/ingredients4.svg",
+            )
+    ]
+
+# This function can be used to rename the 'author' of a message. 
+@cl.author_rename
+def rename(orig_author: str):
+    rename_dict = {
+        "Assistant" : "RAGalicious"
+    }
+    return rename_dict.get(orig_author, orig_author)
+
 # Chat Start Function: Initialize a RAG (Retrieval-Augmented Generation) chain at the start of each chat session.
 
 @cl.on_chat_start
@@ -167,11 +147,12 @@ async def start_chat():
     We will build our LCEL RAG chain here, and store it in the user session. 
     The user session is a dictionary that is unique to each user session, and is stored in the memory of the server.
     """ 
+
     base_rag_chain = (
         # INVOKE CHAIN WITH: {"question" : "<<SOME USER QUESTION>>"}
         # "question" : populated by getting the value of the "question" key
         # "context"  : populated by getting the value of the "question" key and chaining it into the base_retriever
-        {"context": itemgetter("question") | ensemble_retriever |  RunnableLambda(retriever_output_handler) , "question": itemgetter("question")}
+        {"context": itemgetter("question") | retriever |  RunnableLambda(retriever_output_logger) , "question": itemgetter("question")}
         # "context"  : is assigned to a RunnablePassthrough object (will not be called or considered in the next step)
         #              by getting the value of the "context" key from the previous step
         | RunnablePassthrough.assign(context=itemgetter("context"))
