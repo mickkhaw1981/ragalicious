@@ -1,4 +1,6 @@
 import os
+import uuid
+from pprint import pprint
 import chainlit as cl
 from dotenv import load_dotenv
 from operator import itemgetter
@@ -7,6 +9,7 @@ from langchain_openai.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from langchain_core.messages import HumanMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 from langchain.schema import StrOutputParser
@@ -21,6 +24,8 @@ from openai import AsyncOpenAI
 
 from utils.retrievers import get_ensemble_retriever, get_self_retriever
 from utils.debug import retriever_output_logger
+# from utils.graph_old import generate_workflow, log_state_messages
+from utils.graph import generate_workflow
 
 client = AsyncOpenAI()
 
@@ -38,8 +43,8 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID")
 
 # Define the LLM
 base_llm = ChatOpenAI(
-    model="gpt-4o", 
-    openai_api_key=OPENAI_API_KEY, 
+    model="gpt-4o-mini",
+    openai_api_key=OPENAI_API_KEY,
     tags=["base_llm"]
 )
 
@@ -163,6 +168,11 @@ async def start_chat():
     )
     cl.user_session.set("base_rag_chain", base_rag_chain)
 
+    langgraph_chain = generate_workflow(base_llm)
+    
+    cl.user_session.set("langgraph_chain", langgraph_chain)
+    cl.user_session.set("thread_id", str(uuid.uuid4()))
+
 # Message Handling Function: Process and respond to user messages using the RAG chain.
 @cl.on_message  
 async def main(message: cl.Message):
@@ -171,22 +181,48 @@ async def main(message: cl.Message):
     We will use the LCEL RAG chain to generate a response to the user question.
     The LCEL RAG chain is stored in the user session, and is unique to each user session - this is why we can access it here.
     """
-    base_rag_chain = cl.user_session.get("base_rag_chain")
-    msg = cl.Message(content="")
-    async for chunk in base_rag_chain.astream(
-        {"question": message.content},
-        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
-    ):
-        if isinstance(chunk, dict) and 'response' in chunk and isinstance(chunk['response'], str):
-            await msg.stream_token(chunk['response'])
+    # base_rag_chain = cl.user_session.get("base_rag_chain")
+    # msg = cl.Message(content="")
+    # async for chunk in base_rag_chain.astream(
+    #     {"question": message.content},
+    #     config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
+    # ):
+    #     if isinstance(chunk, dict) and 'response' in chunk and isinstance(chunk['response'], str):
+    #         await msg.stream_token(chunk['response'])
 
+    # await msg.send()
+
+    langgraph_chain = cl.user_session.get("langgraph_chain")
+    thread_id = cl.user_session.get("thread_id")
+    msg = cl.Message(content="")
+    langgraph_config = {"configurable": {"thread_id": thread_id, "cl_msg": msg}}
+    
+    async for output in langgraph_chain.astream({"question": message.content}, langgraph_config):
+        for key, value in output.items():
+            # Node
+            pprint(f"Node '{key}':")
+            # Optional: print full state at each node
+            # pprint.pprint(value["keys"], indent=2, width=80, depth=None)
+            if "generation" in value:
+                output = value['generation']
+                # await msg.stream_token(output.content)
+        pprint("\n---\n")
+    
+    # # log_state_messages(messages)
+    # for message in output_state["messages"]:
+    #     if message.response_metadata.get('finish_reason') == 'stop':
+    #         await msg.stream_token(message.content)
     await msg.send()
+
+    # snapshot = langgraph_chain.get_state(langgraph_config)
+    # pprint(snapshot)
+    # pprint(snapshot.values)
 
 # Speech-to-Text Function: Convert audio file to text
 @cl.step(type="tool")
 async def speech_to_text(audio_file):
     response = await client.audio.transcriptions.create(
-        model="whisper-1", 
+        model="whisper-1",
         file=audio_file
     )
     return response.text
