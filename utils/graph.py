@@ -1,4 +1,5 @@
 import json
+import operator
 import chainlit as cl
 from langchain.tools.retriever import create_retriever_tool
 from langgraph.graph.message import add_messages
@@ -28,7 +29,8 @@ class AgentState(TypedDict):
     # Default is to replace. add_messages says "append"
     # messages: Annotated[Sequence[BaseMessage], add_messages]
 
-    question: str
+    # question: str
+    question: Annotated[str, operator.setitem]
     generation: str
     documents: List[str]
     shortlisted_recipes: List[dict]
@@ -172,7 +174,7 @@ def generate_workflow(base_llm):
                 await cl_msg.stream_token(chunk.content)
                 full_response += chunk.content
         
-        return state
+        return {"question": ""}
 
 
     workflow = StateGraph(AgentState)
