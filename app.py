@@ -52,15 +52,13 @@ Provide the top 3 options if available. For each option, provide the following i
 2. The URL of the recipe
 3. The ratings and number of ratings
 
-If you don't know the answer based on the context, say you don't know. 
+If the context is empty, please be careful to note to the user that there are no recipes matching those specific requirements and do NOT provide any other recipes as suggestions. 
 
 Subsequently, if asked for the full recipe or instructions, or if the user indicates a preferred options, provide the full recipe or instructions. 
 
 You no longer need to provide a brief description, the URL,the ratings and number of ratings once the user has made a selection.
 
 After providing your answer, always prompt the user for feedback or more questions in order to continue the conversation.
-
-If the context is empty, please be careful to note to the user that there are no recipes matching those specific requirements and do NOT provide any other recipes as suggestions.
 
 Context:
 {context}

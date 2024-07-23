@@ -1,6 +1,6 @@
 ---
 title: RAGalicious Chatbot (AIE3)
-tags: ["Qdrant", "Chainlit"]
+pinned: false
 ---
 
 # RAGalicious Chatbot
@@ -9,18 +9,9 @@ RAGalicious a RAG-based chatbot designed to help users discover delectable recip
 
 ## Deployment
 
-HF link to come
-
-## Key Features
-
-This app has the following key features:
-
-1. **Lorem**: Lorem
-2. **Lorem**: Lorem
-3. **Lorem**: Lorem
+HF link: https://huggingface.co/spaces/mickkhaw/ragalicious
 
 ## Demo Day Materials
 
-- Slides: link to come
+- Slides: https://docs.google.com/presentation/d/1NUhQ_vRF-rozlN1Eo5F66TFdm65jNyJ6iVJ8Ah23uPQ/edit?usp=sharing
 - YouTube: link to come
-- App architecture: link to come
