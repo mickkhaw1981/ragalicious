@@ -1,49 +1,53 @@
 import os
-from langchain_community.vectorstores import MyScale, MyScaleSettings
-from langchain.retrievers import EnsembleRetriever
-from langchain_qdrant.vectorstores import Qdrant
-from langchain_openai.embeddings import OpenAIEmbeddings
+from typing import List
+from langchain_core.documents import Document
 from langchain.chains.query_constructor.base import AttributeInfo
+from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_community.vectorstores import (
+    MyScale,
+    MyScaleSettings,
+)
 from langchain_community.vectorstores.qdrant import Qdrant
-from langchain_community.vectorstores import Qdrant as QdrantCommunity
-from qdrant_client import QdrantClient
-from .metadata import CUISINES, OCCASIONS, DIETS, EQUIPMENT
+from langchain_core.callbacks.manager import (
+    CallbackManagerForRetrieverRun,
+)
+from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain_qdrant.vectorstores import Qdrant
+
+from .metadata import CUISINES, DIETS, EQUIPMENT, KEY_INGREDIENTS, OCCASIONS
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
-QDRANT_CLOUD_URL = 'https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io'
+QDRANT_CLOUD_URL = "https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io"
 
 
 # Define embedding model
-base_embeddings_model = OpenAIEmbeddings(
-    model="text-embedding-3-small",
-    openai_api_key=OPENAI_API_KEY
-)
+base_embeddings_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=OPENAI_API_KEY)
+
 
 def get_ensemble_retriever():
-
     # Use a Qdrant VectorStore to embed and store our data
     qdrant_descriptions = Qdrant.from_existing_collection(
         embedding=base_embeddings_model,
         # 3 vector indices - recipe_descriptions, recipe_nutrition, recipe_ingredients
         collection_name="recipe_descriptions",
         url=QDRANT_CLOUD_URL,
-        api_key=QDRANT_CLOUD_KEY
+        api_key=QDRANT_CLOUD_KEY,
     )
 
     qdrant_nutrition = Qdrant.from_existing_collection(
         embedding=base_embeddings_model,
         collection_name="recipe_nutrition",
         url=QDRANT_CLOUD_URL,
-        api_key=QDRANT_CLOUD_KEY
+        api_key=QDRANT_CLOUD_KEY,
     )
 
     qdrant_ingredients = Qdrant.from_existing_collection(
         embedding=base_embeddings_model,
         collection_name="recipe_ingredients",
         url=QDRANT_CLOUD_URL,
-        api_key=QDRANT_CLOUD_KEY
+        api_key=QDRANT_CLOUD_KEY,
     )
 
     # Convert retrieved documents to JSON-serializable format
@@ -61,15 +65,42 @@ def get_ensemble_retriever():
             0.5,
             0.25,
             0.25,
-    ])
+        ],
+    )
 
     return ensemble_retriever
 
-def _list_to_string(l:list) -> str:
-    return ', '.join([f'`{item}`' for item in l])
+
+def _list_to_string(l: list) -> str:
+    return ", ".join([f"`{item}`" for item in l])
+
+
+class ModifiedSelfQueryRetriever(SelfQueryRetriever):
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
+        """Get documents relevant for a query.
+
+        Args:
+            query: string to find relevant documents for
+
+        Returns:
+            List of relevant documents
+        """
+        structured_query = self.query_constructor.invoke(
+            {"query": query}, config={"callbacks": run_manager.get_child()}
+        )
+        # if self.verbose:
+        #     logger.info(f"Generated Query: {structured_query}")
+
+        new_query, search_kwargs = self._prepare_query(query, structured_query)
+
+        print("search_kwargs", search_kwargs)
+        self.search_kwargs = search_kwargs
+
+        docs = self._get_docs_with_query(new_query, search_kwargs)
+        return docs
+
 
 def get_self_retriever(llm_model):
-
     metadata_field_info = [
         AttributeInfo(
             name="cuisine",
@@ -103,33 +134,35 @@ def get_self_retriever(llm_model):
             f"Here are some examples: contain (occasion, '{OCCASIONS[0]}')",
             type="list[string]",
         ),
+        # AttributeInfo(
+        #     name="ingredients",
+        #     description="The ingredients used to make this recipe."
+        #     f"It should be one of {_list_to_string(KEY_INGREDIENTS)}"
+        #     "It only supports contain comparisons. "
+        #     f"Here are some examples: contain (ingredients, '{KEY_INGREDIENTS[0]}')",
+        #     type="list[string]",
+        # ),
         AttributeInfo(
-            name="ingredients",
-            description="The main ingredients required to make this recipe."
-            "All ingredients are expressed in Title Case."
-            "It only supports contain comparisons. "
-            "Here are some examples: contain (ingredients, 'A')",
-            type="list[string]",
-        ),
-        AttributeInfo(
-            name="time", description="The estimated time in minutes required to cook and prepare the recipe", type="integer"
+            name="time",
+            description="The estimated time in minutes required to cook and prepare the recipe",
+            type="integer",
         ),
     ]
 
     config = MyScaleSettings(
-        host=os.environ['MYSCALE_HOST'],
+        host=os.environ["MYSCALE_HOST"],
         port=443,
-        username=os.environ['MYSCALE_USERNAME'],
-        password=os.environ['MYSCALE_PASSWORD']
+        username=os.environ["MYSCALE_USERNAME"],
+        password=os.environ["MYSCALE_PASSWORD"],
     )
     vectorstore = MyScale(base_embeddings_model, config)
 
-    retriever = SelfQueryRetriever.from_llm(
-        llm_model, 
-        vectorstore, 
-        "Brief description of a recipe",
-        metadata_field_info, 
+    retriever = ModifiedSelfQueryRetriever.from_llm(
+        llm_model,
+        vectorstore,
+        "Brief summary and key attributes of a recipe, including ingredients, cooking time, occasion, cuisine and diet",
+        metadata_field_info,
         verbose=True,
-        search_kwargs={"k":5}
+        search_kwargs={"k": 10},
     )
     return retriever

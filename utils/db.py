@@ -51,6 +51,7 @@ def get_recipes(urls: list):
 
 def shortlisted_recipes_to_string(recipes):
     output = ""
-    for index, r in enumerate(recipes):
-        output += f"""Suggestion #{index+1}: {r['text']} \n\n"""
+    if recipes and isinstance(recipes, list):
+        for index, r in enumerate(recipes):
+            output += f"""Suggestion #{index+1}: {r['text']} \n\n"""
     return output
