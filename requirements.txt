@@ -8,8 +8,12 @@ aiofiles==23.2.1
     # via chainlit
 aiohttp==3.9.5
     # via
+    #   aiohttp-retry
     #   langchain
     #   langchain-community
+    #   twilio
+aiohttp-retry==2.8.3
+    # via twilio
 aiosignal==1.3.1
     # via aiohttp
 aiosqlite==0.20.0
@@ -282,7 +286,9 @@ pydantic==2.8.2
 pydantic-core==2.20.1
     # via pydantic
 pyjwt==2.8.0
-    # via chainlit
+    # via
+    #   chainlit
+    #   twilio
 python-dateutil==2.9.0.post0
     # via
     #   realtime
@@ -325,6 +331,7 @@ requests==2.32.3
     #   opentelemetry-exporter-otlp-proto-http
     #   tiktoken
     #   transformers
+    #   twilio
 safetensors==0.4.3
     # via transformers
 scikit-learn==1.5.1
@@ -391,6 +398,8 @@ transformers==4.42.4
     # via
     #   langchain-huggingface
     #   sentence-transformers
+twilio==9.2.3
+    # via -r requirements.in
 typing-extensions==4.12.2
     # via
     #   aiosqlite

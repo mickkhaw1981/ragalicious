@@ -14,3 +14,4 @@ clickhouse-connect
 langgraph
 aiosqlite
 supabase
+twilio

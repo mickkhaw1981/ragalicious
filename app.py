@@ -1,31 +1,17 @@
+from io import BytesIO
 import os
-import uuid
 from pprint import pprint
+import uuid
 import chainlit as cl
+from chainlit.element import ElementBased
 from dotenv import load_dotenv
-from operator import itemgetter
-from langchain_core.messages.ai import AIMessageChunk
-from langchain_openai.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEndpoint
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough, RunnableParallel
-from langchain.schema import StrOutputParser
-from langchain.schema.runnable.config import RunnableConfig
-from langchain_core.runnables import RunnableLambda
 
 # modules for audio processing
 import httpx
-from chainlit.element import ElementBased
-from io import BytesIO
+from langchain.schema.runnable.config import RunnableConfig
+from langchain_openai.chat_models import ChatOpenAI
 from openai import AsyncOpenAI
 
-from utils.retrievers import get_ensemble_retriever, get_self_retriever
-from utils.debug import retriever_output_logger
-
-# from utils.graph_old import generate_workflow, log_state_messages
 from utils.graph import generate_workflow
 
 client = AsyncOpenAI()
@@ -42,12 +28,8 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID")
 # -- AUGMENTED -- #
 
 # Define the LLM
-base_llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY, tags=["base_llm"])
-
-
-# -- RETRIEVAL -- #
-
-retriever = get_self_retriever(base_llm)
+base_llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY, tags=["base_llm"], temperature=0)
+power_llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY, tags=["base_llm"])
 
 
 # Conversation starters for the 1st screen
@@ -90,7 +72,7 @@ async def start_chat():
     The user session is a dictionary that is unique to each user session, and is stored in the memory of the server.
     """
 
-    langgraph_chain = generate_workflow(base_llm)
+    langgraph_chain = generate_workflow(base_llm, power_llm)
 
     cl.user_session.set("langgraph_chain", langgraph_chain)
     cl.user_session.set("thread_id", str(uuid.uuid4()))
@@ -112,14 +94,7 @@ async def main(message: cl.Message):
 
     async for output in langgraph_chain.astream({"question": message.content}, langgraph_config):
         for key, value in output.items():
-            # Node
-            pprint(f"Node '{key}':")
-            # Optional: print full state at each node
-            # pprint.pprint(value["keys"], indent=2, width=80, depth=None)
-            if "generation" in value:
-                output = value["generation"]
-                # await msg.stream_token(output.content)
-        pprint("\n---\n")
+            pprint(f"================== Node: '{key}':")
 
     await msg.send()
 
@@ -205,18 +180,30 @@ async def on_audio_end(elements: list[ElementBased]):
 
     transcription = await speech_to_text(whisper_input)
     print("Transcription: ", transcription)
-    text_answer = await generate_text_answer(
-        transcription
-    )  # need to change this to generate answer based on base_rag_chain
 
-    output_name, output_audio = await text_to_speech(text_answer, audio_mime_type)
+    langgraph_chain = cl.user_session.get("langgraph_chain")
+    thread_id = cl.user_session.get("thread_id")
+    msg = cl.Message(content="")
+    langgraph_config = {"configurable": {"thread_id": thread_id, "cl_msg": msg}}
 
-    output_audio_el = cl.Audio(
-        name=output_name,
-        auto_play=True,
-        mime=audio_mime_type,
-        content=output_audio,
-    )
-    answer_message = await cl.Message(content="").send()
-    answer_message.elements = [output_audio_el]
-    await answer_message.update()
+    async for output in langgraph_chain.astream({"question": transcription}, langgraph_config):
+        for key, value in output.items():
+            pprint(f"================== Node: '{key}':")
+
+    await msg.send()
+
+    # text_answer = await generate_text_answer(
+    #     transcription
+    # )  # need to change this to generate answer based on base_rag_chain
+
+    # output_name, output_audio = await text_to_speech(text_answer, audio_mime_type)
+
+    # output_audio_el = cl.Audio(
+    #     name=output_name,
+    #     auto_play=True,
+    #     mime=audio_mime_type,
+    #     content=output_audio,
+    # )
+    # answer_message = await cl.Message(content="").send()
+    # answer_message.elements = [output_audio_el]
+    # await answer_message.update()
