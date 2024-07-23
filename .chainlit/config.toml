@@ -29,7 +29,7 @@ multi_modal = true
 
 # Allows user to use speech to text
 [features.speech_to_text]
-    enabled = true
+    enabled = false
     # See all languages here https://github.com/JamesBrill/react-speech-recognition/blob/HEAD/docs/API.md#language-string
     # language = "en-US"
 
