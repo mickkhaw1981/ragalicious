@@ -1,6 +1,6 @@
 # 😋 Welcome to RAGalicious!
 
-RAGalicious is a chatbot designed to help users discover delectable recipes from the NYTimes Cooking section. It simplifies the recipe discovery process, providing inspiration based on ingredients, dietary needs or meal preferences.
+RAGalicious is a chatbot designed to help users discover delectable recipes from the NYTimes Cooking section. It simplifies the recipe discovery process, providing users inspiration based on ingredients, diet, occasion or equipment you have.
 
 ## Example prompts
 
