@@ -76,7 +76,7 @@ def get_self_retriever(llm_model):
             description="The national / ethnic cuisine categories of the recipe."
             f"It should be one of {_list_to_string(CUISINES)}. "
             "It only supports contain comparisons. "
-            f"Here are some examples: contain (diet, '{CUISINES[0]}')",
+            f"Here are some examples: contain (cuisine, '{CUISINES[0]}')",
             type="list[string]",
         ),
         AttributeInfo(
@@ -92,7 +92,7 @@ def get_self_retriever(llm_model):
             description="The equipment required by this recipe."
             f"It should be one of {_list_to_string(EQUIPMENT)}. "
             "It only supports contain comparisons. "
-            f"Here are some examples: contain (diet, '{EQUIPMENT[0]}')",
+            f"Here are some examples: contain (equipment, '{EQUIPMENT[0]}')",
             type="list[string]",
         ),
         AttributeInfo(
@@ -100,7 +100,7 @@ def get_self_retriever(llm_model):
             description="The occasions, holidays, celebrations that are well suited for this recipe."
             f"It should be one of {_list_to_string(OCCASIONS)}. "
             "It only supports contain comparisons. "
-            f"Here are some examples: contain (diet, '{OCCASIONS[0]}')",
+            f"Here are some examples: contain (occasion, '{OCCASIONS[0]}')",
             type="list[string]",
         ),
         AttributeInfo(
@@ -130,6 +130,6 @@ def get_self_retriever(llm_model):
         "Brief description of a recipe",
         metadata_field_info, 
         verbose=True,
-        search_kwargs={"k":20}
+        search_kwargs={"k":5}
     )
     return retriever
