@@ -1,4 +1,3 @@
-
 def retriever_output_logger(documents):
     print("returning total results count: ", len(documents))
     for doc in documents:
