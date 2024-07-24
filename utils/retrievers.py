@@ -18,8 +18,8 @@ from langchain_qdrant.vectorstores import Qdrant
 from .metadata import CUISINES, DIETS, EQUIPMENT, KEY_INGREDIENTS, OCCASIONS
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
-QDRANT_CLOUD_URL = "https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io"
+#QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
+#QDRANT_CLOUD_URL = "https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io"
 
 
 # Define embedding model
