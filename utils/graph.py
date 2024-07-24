@@ -186,6 +186,7 @@ def generate_workflow(base_llm, power_llm):
         shortlisted_recipes = state["shortlisted_recipes"]
         messages = state["messages"]
         last_message = messages[-1] if messages else ""
+        question_type = state["question_type"]
 
         # LLM with tool and validation
         base_rag_prompt_template = """\
@@ -207,7 +208,20 @@ def generate_workflow(base_llm, power_llm):
         chain = base_rag_prompt | power_llm
 
         full_response = ""
+        thumbnail_url = ""
         cl_msg = config["configurable"]["cl_msg"]
+        if state["question_type"] == "show_specific_recipe":
+            selected_recipe = state.get("selected_recipe")
+            if selected_recipe and selected_recipe.get("thumbnail"):
+                thumbnail_url = selected_recipe["thumbnail"]
+                image = cl.Image(url=thumbnail_url, name="thumbnail", display="inline", size="large")
+
+                # Attach the image to the message
+                await cl.Message(
+                    content="",
+                    elements=[image],
+                ).send()
+
         async for chunk in chain.astream(
             {
                 "question": question,
@@ -220,9 +234,9 @@ def generate_workflow(base_llm, power_llm):
                 await cl_msg.stream_token(chunk.content)
                 full_response += chunk.content
 
-        selected_recipe = get_selected_recipe(base_llm, question, shortlisted_recipes, messages)
-
-        return {"messages": [full_response], "selected_recipe": selected_recipe}
+        return {
+            "messages": [full_response],
+        }
 
     async def _node_single_recipe_qa(state: AgentState, config):
         print("--- Q&A with SINGLE RECIPE ---")
@@ -271,7 +285,7 @@ def generate_workflow(base_llm, power_llm):
         selected_recipe = state.get("selected_recipe")
         messages = state["messages"]
         last_message = messages[-1] if messages else ""
-
+        cl_msg = config["configurable"]["cl_msg"]
         # LLM with tool and validation
         base_rag_prompt_template = """\
             You are a friendly AI assistant.
@@ -303,15 +317,18 @@ def generate_workflow(base_llm, power_llm):
         )
 
         print("message", message)
-
+        tool_arguments = json.loads(message.additional_kwargs["function_call"]["arguments"])
         action = ToolInvocation(
             tool=message.additional_kwargs["function_call"]["name"],
-            tool_input=json.loads(message.additional_kwargs["function_call"]["arguments"]),
+            tool_input=tool_arguments,
         )
 
         response = tool_executor.invoke(action)
 
         function_message = FunctionMessage(content=str(response), name=action.tool)
+        await cl_msg.stream_token(
+            f"""Sure! I've sent a text to {tool_arguments['number']} with the following: \n\n{tool_arguments['text']}"""
+        )
 
         return {"messages": [function_message]}
 
@@ -335,9 +352,6 @@ def generate_workflow(base_llm, power_llm):
         shortlisted_recipes = state.get("shortlisted_recipes")
         selected_recipe = state.get("selected_recipe")
 
-        # if not shortlisted_recipes or len(shortlisted_recipes) == 0:
-        #     print("going to retrieve since no shortlisted_recipes")
-        #     return "retrieve"
         if question_type == "asking_for_recipe_suggestions":
             return "retrieve"
         if question_type in ["referring_to_shortlisted_recipes", "show_specific_recipe"]:

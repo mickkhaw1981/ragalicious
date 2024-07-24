@@ -7,7 +7,6 @@ from chainlit.element import ElementBased
 from dotenv import load_dotenv
 
 # modules for audio processing
-import httpx
 from langchain.schema.runnable.config import RunnableConfig
 from langchain_openai.chat_models import ChatOpenAI
 from openai import AsyncOpenAI
@@ -19,11 +18,6 @@ client = AsyncOpenAI()
 # ---- ENV VARIABLES ---- #
 load_dotenv()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-#QDRANT_CLOUD_KEY = os.environ.get("QDRANT_CLOUD_KEY")
-#QDRANT_CLOUD_URL = "https://30591e3d-7092-41c4-95e1-4d3c7ef6e894.us-east4-0.gcp.cloud.qdrant.io"
-#ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
-#ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID")
-
 
 # -- AUGMENTED -- #
 
@@ -112,35 +106,6 @@ async def generate_text_answer(transcription):
     return msg.content
 
 
-# Text-to-Speech Function: Take the text answer generated and convert it to an audio file
-# @cl.step(type="tool")
-# async def text_to_speech(text: str, mime_type: str):
-#     CHUNK_SIZE = 2048  # try 4096 or 8192 if getting read timeout error. the bigger the chunk size, the fewer API calls but longer wait time
-#     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
-#     headers = {"Accept": mime_type, "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
-#     data = {
-#         "text": text,
-#         "model_id": "eleven_monolingual_v1",
-#         "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
-#     }
-
-#     # make an async HTTP POST request to the ElevenLabs API to convert text to speech and return an audio file
-#     async with httpx.AsyncClient(timeout=60.0) as client:
-#         response = await client.post(url, json=data, headers=headers)
-#         response.raise_for_status()  # Ensure we notice bad responses
-#         buffer = BytesIO()
-#         buffer.name = f"output_audio.{mime_type.split('/')[1]}"
-#         async for chunk in response.aiter_bytes(chunk_size=CHUNK_SIZE):
-#             if chunk:
-#                 buffer.write(chunk)
-
-#         buffer.seek(0)
-#         return buffer.name, buffer.read()
-
-
-# ---- AUDIO PROCESSING ---- #
-
-
 # Audio Chunk Function: Process audio chunks as they arrive from the user's microphone
 @cl.on_audio_chunk
 async def on_audio_chunk(chunk: cl.AudioChunk):
@@ -182,19 +147,3 @@ async def on_audio_end(elements: list[ElementBased]):
             pprint(f"================== Node: '{key}':")
 
     await msg.send()
-
-    # text_answer = await generate_text_answer(
-    #     transcription
-    # )  # need to change this to generate answer based on base_rag_chain
-
-    # output_name, output_audio = await text_to_speech(text_answer, audio_mime_type)
-
-    # output_audio_el = cl.Audio(
-    #     name=output_name,
-    #     auto_play=True,
-    #     mime=audio_mime_type,
-    #     content=output_audio,
-    # )
-    # answer_message = await cl.Message(content="").send()
-    # answer_message.elements = [output_audio_el]
-    # await answer_message.update()
