@@ -125,14 +125,14 @@ def get_question_type_chain(llm_model):
             description="The likelihood / chance that the User Question is asking for recipe suggestions based on some criteria, integers from 1 to 100"
         )
         referring_to_specific_recipe: int = Field(
-            description="The likelihood / chance that the User Question is asking questions about one specific full recipe, integers from 1 to 100"
+            description="The likelihood / chance that the User Question is asking specific questions about a single specific recipe, integers from 1 to 100"
         )
         referring_to_shortlisted_recipes: int = Field(
-            description="The likelihood / chance that the User Question is asking generally about shortlisted recipes provided in the last message, integers from 1 to 100"
+            description="The likelihood / chance that the User Question is asking generally about more than one recipe provided in the last message, integers from 1 to 100"
         )
 
         show_specific_recipe: int = Field(
-            description="The likelihood / chance that the User Question is asking to show a specific recipe, integers from 1 to 100"
+            description="The likelihood / chance that the User Question is asking to show the full recipe for a specific recipe, integers from 1 to 100"
         )
         send_text: int = Field(
             description="The likelihood / chance that the User Question is to send a SMS or text, integers from 1 to 100"
@@ -155,6 +155,8 @@ def get_question_type_chain(llm_model):
         it is highly likely that the user is asking questions referring to shortlisted recipes.
         If the last message was a full single recipe, it is generally likely that the user 
         is asking questions referring to specific recipe.
+        If the user is asking to show the full recipe, it is highly likely that they are asking 
+        to show a specific recipe and less likely that they are asking for anything else.
 
         {format_instructions}
         
